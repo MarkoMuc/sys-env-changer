@@ -1,0 +1,26 @@
+TODO: The paths should be read from a file
+     Make it so multiple config/env variable files can be saved
+          -> They get saved in $HOME/.config/senvch/paths.cnfg
+	  -> Each path is conjoined with a possible alias "path:alias"
+          -> Add a way to display all of them, the user should be able to remove them too
+	  	-> List all paths and alaises "paths -l" or "paths --list"
+		-> List all path with matching alias "paths -l ALIAS"
+	  	-> A path or just alais can be added with "add -p PATH[:ALIAS] (PATH[:ALIAS]...)"
+		-> A path can be deleted with "delete -p PATH[:ALIAS] (PATH[:ALIAS]...)"
+		-> An alais can be deleted with "delete -a ALIAS"
+		-> An alais can be changed with "change ALIAS ALIAS"
+          -> Expand the Help, where it also tells which config. file the variable is connected to
+
+TODO: Only create full dictionary if needed:
+	- When calling HELP
+	- When no "-f or --f is added"
+TODO: Prevent it from crashing when description is not present/not formatted correctly
+      -> make it so it just gives a warning for those files
+
+TODO: Implement at least some kind of checking, if the new value is actually a possible value for this variable
+      -> This can be made optional
+
+TODO: Implement a way, where variables can be tabbed in
+
+TODO: Quite option, where it doesn't print the old value -> or just make current option as the verbose one
+
