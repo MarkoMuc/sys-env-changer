@@ -8,7 +8,6 @@ PATH_TO_FILE = "./test/config.sh"
 
 def fill_dictionary(file_path) :
     #For every path in $HOME/.config/senvch/
-    if os.path.exists(file_path)
     env_vars = {}
     
     with open(file_path, 'r') as file:
@@ -69,29 +68,59 @@ def create_config():
     path_home = os.getenv('HOME', f'/home/{getpass.getuser()}')
     path_home = path_home[:-1] if path_home[- 1] == '/' else path_home 
     path_home += '/.config/senvch'
-    os.makedirs(path_home)
-    return path_home
+    if not os.path.isdir(path_home):
+        os.makedirs(path_home)
+    return path_home + '/paths.cfg'
 
+def command_add(args):
+    print(args)
+
+def command_delete(args):
+    print(args)
+
+def command_list(args):
+    print(args)
+
+def command_change(args):
+    print(args)
 
 if __name__ == "__main__":
     path_config = create_config()
+
+    parser = argparse.ArgumentParser(description="Parses arguments to run")
+
+    subparser= parser.add_subparsers(help='Subcommands help.')
+    parser_add = subparser.add_parser('add', help='Add path with a possible alias.')
+    parser_add.add_argument('add_paths', nargs='+', type=str, 
+                        help='Add one or more paths each with an optional alias in format PATH[:ALAIS].')
+    parser_add.set_defaults(func=command_add)
+
+    parser_delete = subparser.add_parser('delete', help='Delete alias or path.')
+    parser_delete.add_argument('delete_paths', nargs='*', type=str, 
+                        help='Delete one or more paths by path or alias.')
+    parser_delete.add_argument('-a', '--alias', nargs='+', type=str, 
+                        help='Delete one or more aliases.')
+    parser_delete.set_defaults(func=command_delete)
+
+    parser_list = subparser.add_parser('list', help='List existing paths.')
+    parser_list.add_argument('list_alias', nargs='*', type=str, 
+                             help='List one path associated alias.')
+    parser_list.add_argument('-l', '--list', action='store_true', 
+                        help='List all paths and their aliases.')
+    parser_list.set_defaults(func=command_list)
     
-
-
-
-    if PATH_TO_DIR == None :
-        print('Please call senvch -d <directory path>, <directory path> is where the configuration for senvch will be saved!')
+    parser_change = subparser.add_parser('change', help='Change an existing alias.')
+    parser_change.add_argument('original', type=str, 
+                             help='Existing alias.')
+    parser_change.add_argument('new', type=str, 
+                             help='New alias.')
+    parser_change.set_defaults(func=command_change)
     
-    env_dict = fill_dictionary(file_path=PATH_TO_FILE)
-    
-    parser = argparse.ArgumentParser(description="Parses arguments to run", formatter_class=argparse.RawTextHelpFormatter, 
-                                     epilog="All environmental variables: \n" + make_help(env_dict=env_dict))
-    parser.add_argument("variable", type=str, help="Variable to change")
-    parser.add_argument("value", type=str, help="Value to change to")
-    parser.add_argument("-d","dir", type=str, help="")
-
     args = parser.parse_args()
-    
+    args.func(args)
+
+    exit()
+
     info = env_dict.get(args.variable, "unknown")
     
     if info != "unknown" :
