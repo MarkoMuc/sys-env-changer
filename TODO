@@ -15,5 +15,8 @@ TODO: Implement at least some kind of checking, if the new value is actually a p
 
 TODO: Quite option, where it doesn't print the old value -> or just make current option as the verbose one
 
+TODO: Testing
+	-> Add stderr stream
+
 Should you be able to have multiple of the same alias? ->yes!
 One alias can be used on mulitple paths, so they can be bunched up by functionality

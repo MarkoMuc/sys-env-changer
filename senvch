@@ -10,6 +10,17 @@ def check_alias(alias):
     
     return True
 
+def error_call(msg, level=0):
+    if level == 0:
+        print(f'WARNING: {msg}')
+    else:
+        print(f'CRITICAL: {msg}')
+        exit(-1)
+
+def to_implement(args, path_config):
+    print(args)
+    print('NOT IMPLEMENTED')
+
 def fill_dictionary(file_path) :
     #For every path in $HOME/.config/senvch/
     env_vars = {}
@@ -75,14 +86,6 @@ def create_config():
     if not os.path.isdir(path_home):
         os.makedirs(path_home)
     return path_home + '/paths.cfg'
-
-
-def error_call(msg, level=0):
-    if level == 0:
-        print(f'WARNING: {msg}')
-    else:
-        print(f'CRITICAL: {msg}')
-        exit(-1)
 
 
 def command_add(args, path_config):
@@ -243,12 +246,26 @@ if __name__ == "__main__":
                         help='List all paths and their aliases.')
     parser_paths.set_defaults(func=command_paths)
     
-    parser_change = subparser.add_parser('change', help='Change an existing alias. Can also be used to delete na alias, by passing empty string.')
+    parser_change = subparser.add_parser('change', help='Change an existing alias.')
     parser_change.add_argument('original', type=str, 
                              help='Existing alias.')
     parser_change.add_argument('new', type=str, 
                              help='New alias.')
     parser_change.set_defaults(func=command_change)
+    
+    parser_vars = subparser.add_parser('vars', help='List environmental variables.')
+    parser_vars.add_argument('path_alias', nargs='*',type=str, 
+                             help='Path or alias to a file.')
+    parser_vars.add_argument('-a', '-all', action='store_true', 
+                             help='List all variables in all saved files.')
+    parser_vars.set_defaults(func=to_implement)
+    
+    parser_file = subparser.add_parser('file', help='List environmental variables of an unsaved file.')
+    parser_file.add_argument('path', nargs='*',type=str, 
+                             help='Path to a file.')
+    parser_file.add_argument('-c', '--change', type=str, 
+                             help='Change the values of a variable, format: VAR:VALUE .')
+    parser_file.set_defaults(func=to_implement)
     
     args = parser.parse_args()
     args.func(args, path_config)
