@@ -1,6 +1,23 @@
 #!/usr/bin/env python
 import argparse, os, getpass, sys
-from collections import namedtuple
+
+ENV_DICT = {}
+
+class VariableEntry:
+    var_name = ''
+    file_path = ''
+    associated_file = ''
+    var_desc = ''
+    value_desc = ''
+    var_value = ''
+
+    def __init__(self, var_name, file_path, associated_file='', var_desc='', value_desc='', var_value=''):
+        self.var_name = var_name
+        self.file_path = file_path
+        self.associated_file = associated_file
+        self.var_desc = var_desc
+        self.value_desc = value_desc
+        self.var_value = var_value
 
 def check_alias(alias):
     if ':' in alias:
@@ -13,10 +30,10 @@ def check_alias(alias):
 
 def error_call(msg, level=0):
     if level == 0:
-        print(f'WARNING: {msg}')
+        sys.stderr.write(f'WARNING: {msg.strip()} \n')
     else:
-        print(f'CRITICAL: {msg}')
-        exit(-1)
+        sys.stderr.write(f'CRITICAL: {msg.strip()} \n')
+        exit(level)
 
 
 def to_implement(args, path_config):
@@ -24,34 +41,61 @@ def to_implement(args, path_config):
     print('NOT IMPLEMENTED')
 
 
-def fill_dictionary(file_path) :
-    #For every path in $HOME/.config/senvch/
+def fill_dictionary(target) :
     env_vars = {}
     
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
+    for file_path in target:
+        if not os.path.isfile(file_path):
+            error_call(f'Path {file_path} does not exist.')
+            continue
+         
+        for i, entry in enumerate(open(file_path, 'r').readlines()):
+            var_name = ''
+            associated_file = ''
+            var_descr = ''
+            value_descr = ''
+            var_value = ''
+            
+            split_entry = entry.split('#')
+            if len(split_entry) == 0:
+                error_call(f'Line {i} in {file_path} is not formatted correctly.')
+                continue
 
-    for i, line in enumerate(lines) :
-        parts = line.strip().split('=', 1)
-        if len(parts) == 2 :
-            var_name = parts[0]
-            parts = parts[1].strip().split("#", 1) 
-            var_curr_value = parts[0]
-            parts = parts[1].strip().split("&&&", 2) 
-            if len(parts) == 3 :
-                var_script = parts[0]
-                var_description = parts[1]
-                var_values = parts[2]
-                Input = namedtuple('Input',['var_index','var_script', 'var_curr_value', 'var_description', 'var_values'])
-                env_vars[var_name] = Input(var_index=i, var_script = var_script, var_curr_value = var_curr_value,
-                                        var_description = var_description, var_values = var_values)
-            else :
-                print("ERROR IN DESCRIPTION!")
-                exit(-1)
-        else :
-            print("ERROR IN VALUE DECLARATION!")
-            exit(-1)
+            split_var = split_entry[0].split('=')
+
+            if len(split_var) > 2:
+                error_call(f'Line {i} in {file_path} is not formatted correctly.')
+                continue
+            elif len(split_var) == 1:
+                var_name = split_var[0].strip()
+            else:
+                var_name = split_var[0].strip()
+                var_value = split_var[1].strip()
+            
+            if len(split_entry) == 1:
+                error_call(f'Line {i} in {file_path} has no description.')
+            elif len(split_entry) > 2:
+                error_call(f'Line {i} in {file_path} is not formatted correctly.')
+            else:
+                split_desc = split_entry[1].split('&&&')
+
+                if len(split_desc) > 3:
+                    error_call(f'Line {i} in {file_path} is not formatted correctly.')
+                    continue
+                elif len(split_desc) == 3:
+                    associated_file = split_desc[0].strip()
+                    var_desc = split_desc[1].strip()
+                    value_desc = split_desc[2].strip()
+                elif len(split_desc) == 2:
+                    error_call(f'Line {i} in {file_path} is not formatted correctly.')
+                    associated_file = split_desc[0].strip()
+                    var_desc = split_desc[1].strip()
+                else:
+                    error_call(f'Line {i} in {file_path} is not formatted correctly.')
+                    associated_file = split_desc[0].strip()
+            env_vars[var_name] = VariableEntry(var_name, file_path, associated_file, var_desc, value_desc, var_value)
     return env_vars
+
 
 def replace_line(file_path, env_variable, replace_value, line_index):
     
@@ -158,7 +202,7 @@ def command_delete(args, path_config):
                 delete_entry = False
                 
                 for config_entry in contents_config:
-                    if entry == config_entry.split(':')[1].strip():
+                    if entry.strip() == config_entry.split(':')[1].strip():
                         contents_config.remove(config_entry)
                         delete_entry = True
 
@@ -168,13 +212,15 @@ def command_delete(args, path_config):
 
 def command_paths(args, path_config):
     print(args)
-
     contents_config = list()
     if os.path.isfile(path_config):
         contents_config = open(path_config).readlines()
     
     if args.all:
-        print("".join( [entry for entry in contents_config]), end='')
+        if args.only_alias:
+            print("".join(set([entry.split(':')[1] for entry in contents_config if '' != entry.split(':')[1].strip()])), end='')
+        else:
+            print("".join( [entry for entry in contents_config]), end='')
         return
     
     for entry in args.paths_alias:
@@ -209,7 +255,7 @@ def command_change(args, path_config):
                 changed = True
 
         if changed is False:
-            print(f'Alias {args.original} not found.')
+            error_call(f'Alias {args.original} not found.')
 
         config_file.write("".join(contents_config))
 
@@ -218,6 +264,33 @@ def command_delete_alias(args, path_config):
     for alias in args.alias:
         command_change(type("TempARGS",(),{'original':alias, 'new':''}), path_config)
 
+
+def command_vars(args, path_config):
+    print(args)
+    path_set = set()
+    if os.path.isfile(path_config):
+        contents_config = open(path_config).readlines()
+
+    if args.all:
+        return set([entry.split(':')[0].strip() for entry in contents_config])
+    
+    for entry in args.path_alias:
+        found = False
+        if os.path.isfile(entry):
+            for cont_entry in contents_config:
+                if cont_entry.split(':')[0] == entry:
+                    path_set.add(entry)
+                    found = True
+        else:
+            for cont_entry in contents_config:
+                if cont_entry.split(':')[1].strip() == entry:
+                    path_set.add(cont_entry.split(':')[0].strip())
+                    found = True
+
+        if not found:
+            error_call(f'Path or alias {entry} not found.')
+    
+    return path_set
 
 if __name__ == "__main__":
     path_config = create_config()
@@ -247,6 +320,9 @@ if __name__ == "__main__":
                              help='List paths associated with an alias.')
     parser_paths.add_argument('-a', '--all', action='store_true', 
                         help='List all paths and their aliases.')
+    parser_paths.add_argument('-o', '--only-alias', action='store_true', 
+                        help='List all aliases.')
+
     parser_paths.set_defaults(func=command_paths)
     
     parser_change = subparser.add_parser('change', help='Change an existing alias.')
@@ -259,9 +335,9 @@ if __name__ == "__main__":
     parser_vars = subparser.add_parser('vars', help='List environmental variables.')
     parser_vars.add_argument('path_alias', nargs='*',type=str, 
                              help='Path or alias to a file.')
-    parser_vars.add_argument('-a', '-all', action='store_true', 
+    parser_vars.add_argument('-a', '--all', action='store_true', 
                              help='List all variables in all saved files.')
-    parser_vars.set_defaults(func=to_implement)
+    parser_vars.set_defaults(func=command_vars)
     
     parser_file = subparser.add_parser('file', help='List environmental variables of an unsaved file.')
     parser_file.add_argument('path', nargs='*',type=str, 
@@ -271,16 +347,16 @@ if __name__ == "__main__":
     parser_file.set_defaults(func=to_implement)
     
     args = parser.parse_args()
-    args.func(args, path_config)
-
-    exit()
-
-    info = env_dict.get(args.variable, "unknown")
+    target = args.func(args, path_config)
     
-    if info != "unknown" :
-        replace_line(file_path=PATH_TO_FILE, env_variable=args.variable, replace_value=args.value, line_index=info.var_index)
-    else :
-        print(f'Variable {args.variable} does not exist!')
-        exit(-1)
-    
+    print(target)
+    if target is not None:
+        for a in fill_dictionary(target).values():
+            print(a.var_name) 
+            print(a.file_path)
+            print(a.associated_file)
+            print(a.var_desc)
+            print(a.value_desc) 
+            print(a.var_value)
+
     exit(0)
