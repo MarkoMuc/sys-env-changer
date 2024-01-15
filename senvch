@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import argparse, os, getpass
+import argparse, os, getpass, sys
 from collections import namedtuple
 
 def check_alias(alias):
@@ -10,6 +10,7 @@ def check_alias(alias):
     
     return True
 
+
 def error_call(msg, level=0):
     if level == 0:
         print(f'WARNING: {msg}')
@@ -17,9 +18,11 @@ def error_call(msg, level=0):
         print(f'CRITICAL: {msg}')
         exit(-1)
 
+
 def to_implement(args, path_config):
     print(args)
     print('NOT IMPLEMENTED')
+
 
 def fill_dictionary(file_path) :
     #For every path in $HOME/.config/senvch/
@@ -234,7 +237,7 @@ if __name__ == "__main__":
                         help='Delete one or more paths by aliases.')
     parser_delete.set_defaults(func=command_delete)
 
-    parser_delete_alias = subparser.add_parser('delalias', help='Delete alias or path.')
+    parser_delete_alias = subparser.add_parser('delalias', help='Delete alias.')
     parser_delete_alias.add_argument('alias', nargs='+', type=str, 
                         help='Delete an alias.')
     parser_delete_alias.set_defaults(func=command_delete_alias)
