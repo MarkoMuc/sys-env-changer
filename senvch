@@ -2,9 +2,13 @@
 import argparse, os, getpass
 from collections import namedtuple
 
-PATH_TO_DIR = None
-
-PATH_TO_FILE = "./test/config.sh"
+def check_alias(alias):
+    if ':' in alias:
+        return False
+    elif ' ' in alias:
+        return False
+    
+    return True
 
 def fill_dictionary(file_path) :
     #For every path in $HOME/.config/senvch/
@@ -72,17 +76,142 @@ def create_config():
         os.makedirs(path_home)
     return path_home + '/paths.cfg'
 
-def command_add(args):
+
+def error_call(msg, level=0):
+    if level == 0:
+        print(f'WARNING: {msg}')
+    else:
+        print(f'CRITICAL: {msg}')
+        exit(-1)
+
+
+def command_add(args, path_config):
+    # ADD_PATHS is an array with strings in format PATH[:ALIAS]
+    print(args)
+    contents_config = list()
+    if os.path.isfile(path_config):
+        contents_config = open(path_config).readlines()
+    
+    with open(path_config, mode='w+') as config_file:
+        for entry in args.add_paths:
+            entry = entry.strip()
+            add_entry = True
+            path_alias = entry.split(':')
+            
+            if len(path_alias) > 2:
+                error_call(f'Entry {entry} not formatted correctly', 0)
+                continue
+            elif len(path_alias) == 2 and not check_alias(path_alias[1]):
+                error_call(f'Alias of entry {entry} not formatted correctly, cannot contain whitespace or ":"', 0)
+            elif len(path_alias) == 1:
+                entry += ':'
+            if not entry.endswith('\n'):
+                entry += '\n'
+
+            # Replace alias if needed
+            for i, config_entry in enumerate(contents_config):
+                if path_alias[0] == config_entry.split(':')[0]:
+                    contents_config[i] = entry
+                    add_entry = False
+                    break
+
+            if add_entry:
+                contents_config.append(entry)
+
+        config_file.write("".join(contents_config))
+
+
+def command_delete(args, path_config):
+    print(args)
+    contents_config = list()
+    if os.path.isfile(path_config):
+        contents_config = open(path_config).readlines()
+    
+    with open(path_config, mode='w+') as config_file:
+        if args.delete_paths is not None:
+            for entry in args.delete_paths:
+                entry = entry.strip()
+                delete_entry = False
+                
+                for i, config_entry in enumerate(contents_config):
+                    if entry == config_entry.split(':')[0]:
+                        contents_config.remove(config_entry)
+                        delete_entry = True
+                        break
+
+                if not delete_entry:
+                    error_call(f'Path {entry} not found in config file.')
+
+        if args.alias is not None:
+            for entry in args.alias:
+                if not check_alias(entry):
+                    error_call(f'Alias {entry} is not valid.')
+                    continue
+
+                entry = entry.strip()
+                delete_entry = False
+                
+                for config_entry in contents_config:
+                    if entry == config_entry.split(':')[1].strip():
+                        contents_config.remove(config_entry)
+                        delete_entry = True
+
+                if not delete_entry:
+                    error_call(f'Alias {entry} not found in config file.')
+        config_file.write("".join(contents_config))
+
+def command_paths(args, path_config):
     print(args)
 
-def command_delete(args):
-    print(args)
+    contents_config = list()
+    if os.path.isfile(path_config):
+        contents_config = open(path_config).readlines()
+    
+    if args.all:
+        print("".join( [entry for entry in contents_config]), end='')
+        return
+    
+    for entry in args.paths_alias:
+        entry = entry.strip()
+        check_entry = True
+        
+        if not check_alias(entry):
+            error_call(f'Alias {entry} is not valid.')
+        
+        paths_buffer = [config_entry.split(':')[0] for config_entry in contents_config if config_entry.split(':')[1].strip() == entry]
+        
+        if len(paths_buffer) > 0:
+            print("\n".join(paths_buffer))
+        else:
+            error_call(f'Paths connected with alias {entry} not found.')
 
-def command_list(args):
-    print(args)
+def command_change(args, path_config):
+    contents_config = list()
+    if not check_alias(args.new) or not check_alias(args.original) or args.original == '':
+        error_call(f'Format of alias is not valid, try using add command', 1)
 
-def command_change(args):
+    if os.path.isfile(path_config):
+        contents_config = open(path_config).readlines()
+    
+    with open(path_config, mode='w+') as config_file:
+        changed = False
+        
+        # Replace alias if needed
+        for i, config_entry in enumerate(contents_config):
+            if args.original == config_entry.split(':')[1].strip():
+                contents_config[i] = f'{config_entry.split(':')[0]}:{args.new}\n'
+                changed = True
+
+        if changed is False:
+            print(f'Alias {args.original} not found.')
+
+        config_file.write("".join(contents_config))
+
+def command_delete_alias(args, path_config):
     print(args)
+    for alias in args.alias:
+        command_change(type("TempARGS",(),{'original':alias, 'new':''}), path_config)
+
 
 if __name__ == "__main__":
     path_config = create_config()
@@ -97,19 +226,24 @@ if __name__ == "__main__":
 
     parser_delete = subparser.add_parser('delete', help='Delete alias or path.')
     parser_delete.add_argument('delete_paths', nargs='*', type=str, 
-                        help='Delete one or more paths by path or alias.')
+                        help='Delete a path.')
     parser_delete.add_argument('-a', '--alias', nargs='+', type=str, 
-                        help='Delete one or more aliases.')
+                        help='Delete one or more paths by aliases.')
     parser_delete.set_defaults(func=command_delete)
 
-    parser_list = subparser.add_parser('list', help='List existing paths.')
-    parser_list.add_argument('list_alias', nargs='*', type=str, 
-                             help='List one path associated alias.')
-    parser_list.add_argument('-l', '--list', action='store_true', 
-                        help='List all paths and their aliases.')
-    parser_list.set_defaults(func=command_list)
+    parser_delete_alias = subparser.add_parser('delalias', help='Delete alias or path.')
+    parser_delete_alias.add_argument('alias', nargs='+', type=str, 
+                        help='Delete an alias.')
+    parser_delete_alias.set_defaults(func=command_delete_alias)
     
-    parser_change = subparser.add_parser('change', help='Change an existing alias.')
+    parser_paths = subparser.add_parser('paths', help='List existing paths.')
+    parser_paths.add_argument('paths_alias', nargs='*', type=str, 
+                             help='List paths associated with an alias.')
+    parser_paths.add_argument('-a', '--all', action='store_true', 
+                        help='List all paths and their aliases.')
+    parser_paths.set_defaults(func=command_paths)
+    
+    parser_change = subparser.add_parser('change', help='Change an existing alias. Can also be used to delete na alias, by passing empty string.')
     parser_change.add_argument('original', type=str, 
                              help='Existing alias.')
     parser_change.add_argument('new', type=str, 
@@ -117,7 +251,7 @@ if __name__ == "__main__":
     parser_change.set_defaults(func=command_change)
     
     args = parser.parse_args()
-    args.func(args)
+    args.func(args, path_config)
 
     exit()
 
