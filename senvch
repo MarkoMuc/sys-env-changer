@@ -19,6 +19,7 @@ class VariableEntry:
         self.value_desc = value_desc
         self.var_value = var_value
 
+
 def check_alias(alias):
     if ':' in alias:
         return False
@@ -52,8 +53,8 @@ def fill_dictionary(target) :
         for i, entry in enumerate(open(file_path, 'r').readlines()):
             var_name = ''
             associated_file = ''
-            var_descr = ''
-            value_descr = ''
+            var_desc = ''
+            value_desc = ''
             var_value = ''
             
             split_entry = entry.split('#')
@@ -117,13 +118,7 @@ def replace_line(file_path, env_variable, replace_value, line_index):
     else:
         print("Line not found in the file.")
 
-def make_help(env_dict) :
-    help_string = ""
-    
-    for key, value in env_dict.items():
-        help_string += f'\t{key} - from: {value.var_script} | current value: {value.var_curr_value} | description : {value.var_description} | values: {value.var_values}.\n'
-    
-    return help_string
+
 
 def create_config():
     #Create folder $HOME/.config/senvch
@@ -182,8 +177,8 @@ def command_delete(args, path_config):
             for entry in args.delete_paths:
                 entry = entry.strip()
                 delete_entry = False
-                
-                for i, config_entry in enumerate(contents_config):
+                contents = contents_config[:]
+                for i, config_entry in enumerate(contents):
                     if entry == config_entry.split(':')[0]:
                         contents_config.remove(config_entry)
                         delete_entry = True
@@ -201,6 +196,7 @@ def command_delete(args, path_config):
                 entry = entry.strip()
                 delete_entry = False
                 
+                contents = contents_config[:]
                 for config_entry in contents_config:
                     if entry.strip() == config_entry.split(':')[1].strip():
                         contents_config.remove(config_entry)
@@ -209,6 +205,7 @@ def command_delete(args, path_config):
                 if not delete_entry:
                     error_call(f'Alias {entry} not found in config file.')
         config_file.write("".join(contents_config))
+
 
 def command_paths(args, path_config):
     print(args)
@@ -237,6 +234,7 @@ def command_paths(args, path_config):
         else:
             error_call(f'Paths connected with alias {entry} not found.')
 
+
 def command_change(args, path_config):
     contents_config = list()
     if not check_alias(args.new) or not check_alias(args.original) or args.original == '':
@@ -259,6 +257,7 @@ def command_change(args, path_config):
 
         config_file.write("".join(contents_config))
 
+
 def command_delete_alias(args, path_config):
     print(args)
     for alias in args.alias:
@@ -272,8 +271,7 @@ def command_vars(args, path_config):
         contents_config = open(path_config).readlines()
 
     if args.all:
-        return set([entry.split(':')[0].strip() for entry in contents_config])
-    
+        path_set = set([entry.split(':')[0].strip() for entry in contents_config])
     for entry in args.path_alias:
         found = False
         if os.path.isfile(entry):
@@ -290,7 +288,20 @@ def command_vars(args, path_config):
         if not found:
             error_call(f'Path or alias {entry} not found.')
     
-    return path_set
+    target = fill_dictionary(path_set)
+    
+    for entry in target.values():
+        if args.verbose == 4: 
+            print(f'[from:{entry.file_path}, for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| desc: {entry.var_desc}, possible:{entry.value_desc}')
+        elif args.verbose == 3:
+            print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| desc: {entry.var_desc}, possible:{entry.value_desc}')
+        elif args.verbose == 2:
+            print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| possible:{entry.value_desc}')
+        elif args.verbose == 1:
+            print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}')
+        elif args.verbose == 0:
+            print(f'{entry.var_name} = {entry.var_value}')
+
 
 if __name__ == "__main__":
     path_config = create_config()
@@ -337,6 +348,9 @@ if __name__ == "__main__":
                              help='Path or alias to a file.')
     parser_vars.add_argument('-a', '--all', action='store_true', 
                              help='List all variables in all saved files.')
+    parser_vars.add_argument('-v', '--verbose', choices = range(0,5), type=int, default=0, 
+                             help='List all variables in all saved files.')
+
     parser_vars.set_defaults(func=command_vars)
     
     parser_file = subparser.add_parser('file', help='List environmental variables of an unsaved file.')
@@ -347,16 +361,6 @@ if __name__ == "__main__":
     parser_file.set_defaults(func=to_implement)
     
     args = parser.parse_args()
-    target = args.func(args, path_config)
+    args.func(args, path_config)
     
-    print(target)
-    if target is not None:
-        for a in fill_dictionary(target).values():
-            print(a.var_name) 
-            print(a.file_path)
-            print(a.associated_file)
-            print(a.var_desc)
-            print(a.value_desc) 
-            print(a.var_value)
-
     exit(0)

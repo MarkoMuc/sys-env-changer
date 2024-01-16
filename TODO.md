@@ -29,14 +29,16 @@
   - [ ] TODO: Changing values
 	- Change the value of a variable "edit PATH VARIABLE VALUE"
 	- Change the value of a variable by alias "edit ALIAS VARIABLE VALUE"
-- [ ] TODO: Prevent it from crashing when description is not present/not formatted correctly
+- [X] TODO: Prevent it from crashing when description is not present/not formatted correctly
       - make it so it just gives a warning for those files
 - [ ] TODO: Implement at least some kind of checking, if the new value is actually a possible value for this variable
       - This can be made optional
 - [ ] TODO: Quite option, where it doesn't print the old value -> or just make current option as the verbose one
 - [ ] TODO: Testing
 	- [X] Add stderr stream
-	- [ ] Fix deleting
+	- [X] Fix deleting
+	- [ ] If multiple = in variable name and value combo, just combine them as the value
+	- [ ] Same for splitting with #
 ## Ideas
 
 Should you be able to have multiple of the same alias? -> yes!
@@ -45,3 +47,6 @@ One alias can be used on mulitple paths, so they can be bunched up by functional
 When filling the dictionary, if an alias is used, parse the config file for all paths connected to it.
 
 Maybe add also the ability to change the description and name of the variable.
+
+Since editing values is supposed to be the main thing, maybe edit should be the default command and others are the subcommands.
+
