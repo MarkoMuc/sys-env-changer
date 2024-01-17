@@ -39,7 +39,7 @@
 	- [X] Fix deleting
 	- [X] If multiple = in variable name and value combo, just combine them as the value
 	- [X] Same for splitting with #
-	- [ ] Same var name means overwritting
+	- [X] Same var name means overwritting
 ## Ideas
 
 Should you be able to have multiple of the same alias? -> yes!
