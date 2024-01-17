@@ -42,7 +42,7 @@
 - [X] If multiple = in variable name and value combo, just combine them as the value
 - [X] Same for splitting with #
 - [X] Same var name means overwritting
-
+- [ ] Add argument -n to add, when you dont want to change an existing path:alias combo 
 ## Ideas
 
 Maybe add also the ability to change the description and name of the variable.

@@ -154,7 +154,7 @@ def command_delete(args, path_config):
                 entry = entry.strip()
                 delete_entry = False
                 contents = contents_config[:]
-                for i, config_entry in enumerate(contents):
+                for config_entry in contents:
                     if entry == config_entry.split(':')[0]:
                         contents_config.remove(config_entry)
                         delete_entry = True
@@ -173,7 +173,7 @@ def command_delete(args, path_config):
                 delete_entry = False
                 
                 contents = contents_config[:]
-                for config_entry in contents_config:
+                for config_entry in contents:
                     if entry.strip() == config_entry.split(':')[1].strip():
                         contents_config.remove(config_entry)
                         delete_entry = True
