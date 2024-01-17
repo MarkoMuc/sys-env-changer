@@ -37,8 +37,9 @@
 - [ ] TODO: Testing
 	- [X] Add stderr stream
 	- [X] Fix deleting
-	- [ ] If multiple = in variable name and value combo, just combine them as the value
-	- [ ] Same for splitting with #
+	- [X] If multiple = in variable name and value combo, just combine them as the value
+	- [X] Same for splitting with #
+	- [ ] Same var name means overwritting
 ## Ideas
 
 Should you be able to have multiple of the same alias? -> yes!
@@ -50,3 +51,4 @@ Maybe add also the ability to change the description and name of the variable.
 
 Since editing values is supposed to be the main thing, maybe edit should be the default command and others are the subcommands.
 
+Same var name means overwritting -> use name+path, since you will always have them.

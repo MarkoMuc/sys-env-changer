@@ -66,34 +66,35 @@ def fill_dictionary(target) :
 
             if len(split_var) > 2:
                 error_call(f'Line {i} in {file_path} is not formatted correctly.')
-                continue
+                split_var[1] = "=".join(split_var[1:]) 
             elif len(split_var) == 1:
                 var_name = split_var[0].strip()
-            else:
-                var_name = split_var[0].strip()
-                var_value = split_var[1].strip()
+            
+            var_name = split_var[0].strip()
+            var_value = split_var[1].strip()
             
             if len(split_entry) == 1:
                 error_call(f'Line {i} in {file_path} has no description.')
             elif len(split_entry) > 2:
+                split_entry[1] = "#".join(split_entry[1:])
                 error_call(f'Line {i} in {file_path} is not formatted correctly.')
-            else:
-                split_desc = split_entry[1].split('&&&')
 
-                if len(split_desc) > 3:
-                    error_call(f'Line {i} in {file_path} is not formatted correctly.')
-                    continue
-                elif len(split_desc) == 3:
-                    associated_file = split_desc[0].strip()
-                    var_desc = split_desc[1].strip()
-                    value_desc = split_desc[2].strip()
-                elif len(split_desc) == 2:
-                    error_call(f'Line {i} in {file_path} is not formatted correctly.')
-                    associated_file = split_desc[0].strip()
-                    var_desc = split_desc[1].strip()
-                else:
-                    error_call(f'Line {i} in {file_path} is not formatted correctly.')
-                    associated_file = split_desc[0].strip()
+            split_desc = split_entry[1].split('&&&')
+
+            if len(split_desc) > 3:
+                error_call(f'Line {i} in {file_path} is not formatted correctly.')
+                
+            if len(split_desc) == 3:
+                associated_file = split_desc[0].strip()
+                var_desc = split_desc[1].strip()
+                value_desc = split_desc[2].strip()
+            elif len(split_desc) == 2:
+                error_call(f'Line {i} in {file_path} is not formatted correctly.')
+                associated_file = split_desc[0].strip()
+                var_desc = split_desc[1].strip()
+            else:
+                error_call(f'Line {i} in {file_path} is not formatted correctly.')
+                associated_file = split_desc[0].strip()
             env_vars[var_name] = VariableEntry(var_name, file_path, associated_file, var_desc, value_desc, var_value)
     return env_vars
 
