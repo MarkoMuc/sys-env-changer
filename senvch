@@ -65,7 +65,6 @@ def fill_dictionary(target) :
             split_var = split_entry[0].split('=')
 
             if len(split_var) > 2:
-                error_call(f'Line {i} in {file_path} is not formatted correctly.')
                 split_var[1] = "=".join(split_var[1:]) 
             elif len(split_var) == 1:
                 var_name = split_var[0].strip()
@@ -77,7 +76,6 @@ def fill_dictionary(target) :
                 error_call(f'Line {i} in {file_path} has no description.')
             elif len(split_entry) > 2:
                 split_entry[1] = "#".join(split_entry[1:])
-                error_call(f'Line {i} in {file_path} is not formatted correctly.')
 
             split_desc = split_entry[1].split('&&&')
 
@@ -97,29 +95,6 @@ def fill_dictionary(target) :
                 associated_file = split_desc[0].strip()
             env_vars[f'{var_name}:{file_path}'] = VariableEntry(var_name, file_path, associated_file, var_desc, value_desc, var_value)
     return env_vars
-
-
-def replace_line(file_path, env_variable, replace_value, line_index):
-    
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    # If the line was found, replace it
-    if line_index is not None:
-        descrp = lines[line_index].strip().split('#', 1)
-        new_line = f'{env_variable}={replace_value} #{descrp[1]}\n'
-        old_line = lines[line_index]
-        lines[line_index] = new_line
-
-        # Write the updated content back to the file
-        with open(file_path, 'w') as file:
-            file.writelines(lines)
-
-        print("Line replaced successfully. Old value : ", old_line)
-    else:
-        print("Line not found in the file.")
-
-
 
 def create_config():
     #Create folder $HOME/.config/senvch
@@ -304,12 +279,45 @@ def command_vars(args, path_config):
             print(f'{entry.var_name} = {entry.var_value}')
 
 
+def command_edit(args, path_config):
+    print(args)
+    edit_paths = set()
+
+    if os.path.isfile(args.PATH_ALIAS):
+        edit_paths.add(args.PATH_ALIAS)
+    elif os.path.isfile(path_config):
+        contents_config = open(path_config).readlines()
+        edit_paths = set(entry.split(':')[0] for entry in contents_config if entry.split(':')[1].strip() == args.PATH_ALIAS)
+    
+    vars_dict = fill_dictionary(edit_paths)
+
+    for edit_path in edit_paths:
+        entry = vars_dict.get(f'{args.VARIABLE}:{edit_path}', None)
+        if entry is None:
+            error_call(f'Variable {args.VARIABLE} not found in {edit_path}.')
+        else:
+            with open(edit_path, 'r') as file:
+                lines = file.readlines()
+            
+            for i, line in enumerate(lines):
+                if entry.var_name in line:
+                    old_line = lines[i]
+                    lines[i] = f'{entry.var_name}={args.VALUE} # {entry.associated_file} &&& {entry.var_desc} &&& {entry.value_desc}\n'
+            
+            with open(edit_path, 'w') as file:
+                file.writelines(lines)
+
+
+def command_file(args, path_config):
+    print(args)
+
+
 if __name__ == "__main__":
     path_config = create_config()
 
     parser = argparse.ArgumentParser(description="Parses arguments to run")
 
-    subparser= parser.add_subparsers(help='Subcommands help.')
+    subparser = parser.add_subparsers(help='Subcommands help.')
     parser_add = subparser.add_parser('add', help='Add path with a possible alias.')
     parser_add.add_argument('add_paths', nargs='+', type=str, 
                         help='Add one or more paths each with an optional alias in format PATH[:ALAIS].')
@@ -357,11 +365,23 @@ if __name__ == "__main__":
     parser_file = subparser.add_parser('file', help='List environmental variables of an unsaved file.')
     parser_file.add_argument('path', nargs='*',type=str, 
                              help='Path to a file.')
+    
     parser_file.add_argument('-c', '--change', type=str, 
                              help='Change the values of a variable, format: VAR:VALUE .')
     parser_file.set_defaults(func=to_implement)
     
-    args = parser.parse_args()
-    args.func(args, path_config)
+    parser_edit = subparser.add_parser('edit', help='Change the value of a variable.')
+    parser_edit.add_argument('PATH_ALIAS', type=str, help='Path or alias.')
+    parser_edit.add_argument('VARIABLE', type=str, help='Variable to edit.')
+    parser_edit.add_argument('VALUE', type=str, help='New value.')
+    parser_edit.set_defaults(func=command_edit)
     
+    args = parser.parse_args()
+    
+    try:
+        args.func(args, path_config)
+    except Exception as e:
+        print(e)
+        parser.parse_args(['-h'])
+
     exit(0)
