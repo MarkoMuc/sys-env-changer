@@ -20,6 +20,40 @@ class VariableEntry:
         self.var_value = var_value
 
 
+def edit_entry(edit_paths, variable, value):
+    vars_dict = fill_dictionary(edit_paths)
+    
+    for edit_path in edit_paths:
+        entry = vars_dict.get(f'{variable}:{edit_path}', None)
+        if entry is None:
+            error_call(f'Variable {variable} not found in {edit_path}.')
+        else:
+            with open(edit_path, 'r') as file:
+                lines = file.readlines()
+            
+            for i, line in enumerate(lines):
+                if entry.var_name in line:
+                    old_line = lines[i]
+                    lines[i] = f'{entry.var_name}={value} # {entry.associated_file} &&& {entry.var_desc} &&& {entry.value_desc}\n'
+            
+            with open(edit_path, 'w') as file:
+                file.writelines(lines)
+
+
+def print_entry(entry, verbose):
+    if verbose == 4: 
+        print(f'[from:{entry.file_path}, for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| desc: {entry.var_desc}, possible:{entry.value_desc}')
+    elif verbose == 3:
+        print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| desc: {entry.var_desc}, possible:{entry.value_desc}')
+    elif verbose == 2:
+        print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| possible:{entry.value_desc}')
+    elif verbose == 1:
+        print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}')
+    elif verbose == 0:
+        print(f'{entry.var_name} = {entry.var_value}')
+
+
+
 def check_alias(alias):
     if ':' in alias:
         return False
@@ -113,6 +147,23 @@ def command_add(args, path_config):
     if os.path.isfile(path_config):
         contents_config = open(path_config).readlines()
     
+    if args.new == True:
+        with open(path_config, mode='a') as config_file:
+            for entry in args.add_paths:
+                entry = entry.strip()
+                
+                path_alias = entry.split(':')
+                if len(path_alias) > 2:
+                    error_call(f'Entry {entry} not formatted correctly', 0)
+                    continue
+                elif len(path_alias) == 2 and not check_alias(path_alias[1]):
+                    error_call(f'Alias of entry {entry} not formatted correctly, cannot contain whitespace or ":"', 0)
+                elif len(path_alias) == 1:
+                    entry += ':'
+                
+                config_file.write(f'{entry}\n')
+            return
+
     with open(path_config, mode='w+') as config_file:
         for entry in args.add_paths:
             entry = entry.strip()
@@ -267,16 +318,7 @@ def command_vars(args, path_config):
     target = fill_dictionary(path_set)
     
     for entry in target.values():
-        if args.verbose == 4: 
-            print(f'[from:{entry.file_path}, for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| desc: {entry.var_desc}, possible:{entry.value_desc}')
-        elif args.verbose == 3:
-            print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| desc: {entry.var_desc}, possible:{entry.value_desc}')
-        elif args.verbose == 2:
-            print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}| possible:{entry.value_desc}')
-        elif args.verbose == 1:
-            print(f'[for:{entry.associated_file}]; {entry.var_name} = {entry.var_value}')
-        elif args.verbose == 0:
-            print(f'{entry.var_name} = {entry.var_value}')
+        print_entry(entry, args.verbose)
 
 
 def command_edit(args, path_config):
@@ -289,28 +331,26 @@ def command_edit(args, path_config):
         contents_config = open(path_config).readlines()
         edit_paths = set(entry.split(':')[0] for entry in contents_config if entry.split(':')[1].strip() == args.PATH_ALIAS)
     
-    vars_dict = fill_dictionary(edit_paths)
-
-    for edit_path in edit_paths:
-        entry = vars_dict.get(f'{args.VARIABLE}:{edit_path}', None)
-        if entry is None:
-            error_call(f'Variable {args.VARIABLE} not found in {edit_path}.')
-        else:
-            with open(edit_path, 'r') as file:
-                lines = file.readlines()
-            
-            for i, line in enumerate(lines):
-                if entry.var_name in line:
-                    old_line = lines[i]
-                    lines[i] = f'{entry.var_name}={args.VALUE} # {entry.associated_file} &&& {entry.var_desc} &&& {entry.value_desc}\n'
-            
-            with open(edit_path, 'w') as file:
-                file.writelines(lines)
+    edit_entry(edit_paths, args.VARIABLE, args.VALUE)
 
 
 def command_file(args, path_config):
     print(args)
-
+    
+    target = fill_dictionary(args.PATH)
+    if args.change is None or len(args.change) == 0:
+        for entry in target.values():
+            print_entry(entry, args.verbose)
+    else:
+        args.change[0] = args.change[0].strip()
+        var_val = args.change[0].split(":")
+        if len(var_val) > 2:
+            edit_entry(args.PATH, var_val[0], ":".join(var_val[1:]))
+        elif len(var_val) == 2:
+            edit_entry(args.PATH, var_val[0], var_val[1])
+        elif len(var_val) == 1:
+            error_call(f'No value found.', 1)
+     
 
 if __name__ == "__main__":
     path_config = create_config()
@@ -321,6 +361,8 @@ if __name__ == "__main__":
     parser_add = subparser.add_parser('add', help='Add path with a possible alias.')
     parser_add.add_argument('add_paths', nargs='+', type=str, 
                         help='Add one or more paths each with an optional alias in format PATH[:ALAIS].')
+    parser_add.add_argument('-n', '--new', action='store_true', 
+                        help='All paths shoudl be appened, prevents overwritting.')
     parser_add.set_defaults(func=command_add)
 
     parser_delete = subparser.add_parser('delete', help='Delete alias or path.')
@@ -363,12 +405,13 @@ if __name__ == "__main__":
     parser_vars.set_defaults(func=command_vars)
     
     parser_file = subparser.add_parser('file', help='List environmental variables of an unsaved file.')
-    parser_file.add_argument('path', nargs='*',type=str, 
-                             help='Path to a file.')
-    
-    parser_file.add_argument('-c', '--change', type=str, 
-                             help='Change the values of a variable, format: VAR:VALUE .')
-    parser_file.set_defaults(func=to_implement)
+    parser_file.add_argument('PATH', type=str, nargs=1, 
+                             help='Path to a file')
+    parser_file.add_argument('-v', '--verbose', default=0, choices=range(0,5), 
+                             help='Verbose level.')
+    parser_file.add_argument('-c', '--change', type=str, nargs=1,
+                             help='Change the value of a variable, format: VAR:VALUE .')
+    parser_file.set_defaults(func=command_file)
     
     parser_edit = subparser.add_parser('edit', help='Change the value of a variable.')
     parser_edit.add_argument('PATH_ALIAS', type=str, help='Path or alias.')

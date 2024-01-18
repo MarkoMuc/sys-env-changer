@@ -6,7 +6,7 @@
           - They get saved in $HOME/.config/senvch/paths.cfg.
 	  - Each path is conjoined with a possible alias "path:alias".
           - Add a way to display all of them, the user should be able to remove them too.
-- [ ] TODO: Commands.
+- [X] TODO: Commands.
   - [X] TODO: Add paths.
 	- A path or an alais can be added with "add PATH[:ALIAS] ..."
   - [X] TODO: List saved paths and aliases
@@ -25,15 +25,13 @@
 	- List all variables in all config files "vars -a".
   - [X] TODO: Changing values.
 	- Change the value of a variable "edit (PATH|ALIAS) VARIABLE VALUE".
-  - [ ] TODO: Working with file paths that are not saved.
+  - [X] TODO: Working with file paths that are not saved.
 	- Print all variables in a file "file -a PATH".
 	- Change variable in a file "file PATH -c VARIABLE VALUE".
 - [X] TODO: Prevent it from crashing when description is not present/not formatted correctly.
       - make it so it just gives a warning for those files.
-- [ ] TODO: Implement at least some kind of checking, if the new value is actually a possible value for this variable.
-      - This can be made optional.
-- [ ] TODO: Quite option, where it doesn't print the old value -> or just make current option as the verbose one.
-- [ ] TODO: Add regex searching.
+- [X] TODO: Quite option, where it doesn't print the old value -> or just make current option as the verbose one.
+- [ ] TODO: Testing
 
 ## Quick Fix
 
@@ -42,9 +40,14 @@
 - [X] If multiple = in variable name and value combo, just combine them as the value
 - [X] Same for splitting with #
 - [X] Same var name means overwritting
-- [ ] Add argument -n to add, when you dont want to change an existing path:alias combo 
+- [X] Add argument -n to add, when you dont want to change an existing path:alias combo 
+
 ## Ideas
 
 Maybe add also the ability to change the description and name of the variable.
 
 Since editing values is supposed to be the main thing, maybe edit should be the default command and others are the subcommands.
+
+Future release:
+- Add regex searching.
+
